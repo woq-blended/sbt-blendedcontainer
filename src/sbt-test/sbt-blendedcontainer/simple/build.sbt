@@ -38,7 +38,7 @@ lazy val root = project.in(file("."))
     version := "0.1",
     scalaVersion := "2.12.8",
 
-    blendedVersion := "3.1-SNAPSHOT",
+    blendedVersion := "3.0-M5",
     materializeExtraFeatures := Seq(
       (feature1 / featureGenerate).value,
       (feature2 / featureGenerate).value
