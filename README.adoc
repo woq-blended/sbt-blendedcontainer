@@ -1,2 +1,19 @@
 = Blended Container packaging as sbt plugin
+:version: 0.1-SNAPSHOT
+
+== Quickstart
+
+Add the plugin to your `project/plugins.sbt` file.
+
+[source,scala,subs="attributes,verbatim"]
+----
+addSbtPlugin("de.wayofquality.blended" % "sbt-blendedcontainer" % "{version}")
+----
+
+
+== License
+
+This project is published under the https://www.apache.org/licenses/LICENSE-2.0[Apache License, Version 2.0]
+
+== Changelog
 
