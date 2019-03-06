@@ -24,7 +24,7 @@ lazy val feature2 = project.in(file("feature2"))
         FeatureRef("feature1")
       ),
       bundles = Seq(
-        FeatureBundle("org.slf4j" % "slf4j-api" % "1.7.14")
+        FeatureBundle("org.slf4j" % "slf4j-api" % "1.7.25")
       )
     )
   )
