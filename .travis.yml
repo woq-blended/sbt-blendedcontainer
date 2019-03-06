@@ -31,4 +31,5 @@ jobs:
         - sh -e scripts/build-prereq.sh sbt-blendedfeature
 
     - stage: Test
-      script: sbt test scripted publishLocal
+      script:
+        - sbt test scripted publishLocal
