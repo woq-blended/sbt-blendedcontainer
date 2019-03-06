@@ -1,10 +1,5 @@
 language: scala
 
-jdk:
-  - openjdk8
-  - oraclejdk8
-  - openjdk11
-
 cache:
   directories:
     - ".prereq-refs"
@@ -18,10 +13,6 @@ before_cache:
 # We define the script in the build matrix
 script: echo "No script specified" && false
 
-stages:
-  - Prerequisites
-  - Test
-
 jobs:
   include:
     - stage: Prerequisites
@@ -29,7 +20,12 @@ jobs:
       script:
         - sh -e scripts/build-prereq.sh sbt-filterresources
         - sh -e scripts/build-prereq.sh sbt-blendedfeature
-
     - stage: Test
-      script:
-        - sbt test scripted publishLocal
+      jdk: openjdk8
+      script: sbt test scripted publishLocal
+    - stage: Test
+      jdk: oraclejdk8
+      script: sbt test scripted publishLocal
+    - stage: Test
+      jdk: openjdk11
+      script: sbt test scripted publishLocal
