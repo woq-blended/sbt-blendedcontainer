@@ -18,6 +18,10 @@ before_cache:
 # We define the script in the build matrix
 script: echo "No script specified" && false
 
+stages:
+  - Prerequisites
+  - Test
+
 jobs:
   include:
     - stage: Prerequisites
