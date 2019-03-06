@@ -16,15 +16,20 @@ script: echo "No script specified" && false
 jobs:
   include:
     - stage: Prerequisites
-      name: blended sbt plugins
+      name: Required but unreleased sbt plugins
+      jdk: openjdk8
       script:
         - sh -e scripts/build-prereq.sh sbt-filterresources
         - sh -e scripts/build-prereq.sh sbt-blendedfeature
+    - stage: Prerequisites
+      name: Required but unreleased sbt plugins
+      jdk: openjdk11
+      script:
+        - sh -e scripts/build-prereq.sh sbt-filterresources
+        - sh -e scripts/build-prereq.sh sbt-blendedfeature
+
     - stage: Test
       jdk: openjdk8
-      script: sbt test scripted publishLocal
-    - stage: Test
-      jdk: oraclejdk8
       script: sbt test scripted publishLocal
     - stage: Test
       jdk: openjdk11
