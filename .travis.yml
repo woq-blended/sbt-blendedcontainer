@@ -5,4 +5,26 @@ jdk:
   - oraclejdk8
   - openjdk11
 
-script: sbt test scripted publishLocal
+cache:
+  directories:
+    - ".prereq-refs"
+    - "$HOME/.ivy2"
+    - "$HOME/.sbt"
+
+before_cache:
+  - rm -Rf $HOME/.ivy2/.sbt.cache.lock
+  - rm -Rf $HOME/.ivy2/.sbt.ivy.lock
+
+# We define the script in the build matrix
+script: echo "No script specified" && false
+
+jobs:
+  include:
+    - stage: Prerequisites
+      name: blended sbt plugins
+      script:
+        - sh -e scripts/build-prereq.sh sbt-filterresources
+        - sh -e scripts/build-prereq.sh sbt-blendedfeatures
+
+    - stage: Test
+      script: sbt test scripted publishLocal
