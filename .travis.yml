@@ -28,7 +28,7 @@ jobs:
       name: blended sbt plugins
       script:
         - sh -e scripts/build-prereq.sh sbt-filterresources
-        - sh -e scripts/build-prereq.sh sbt-blendedfeatures
+        - sh -e scripts/build-prereq.sh sbt-blendedfeature
 
     - stage: Test
       script: sbt test scripted publishLocal
