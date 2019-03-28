@@ -1,6 +1,7 @@
 $ exists src/main/resources/profile/profile.conf
 > update
 > feature1/publishLocal
+$ exists feature1/target/features/feature1.conf
 
 > update
 > packageDeploymentPack

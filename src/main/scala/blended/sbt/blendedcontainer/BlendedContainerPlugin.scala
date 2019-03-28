@@ -3,13 +3,15 @@ package blended.sbt.container
 import java.io.File
 import java.net.URLClassLoader
 
+import scala.util.Try
+
 import blended.sbt.feature.Feature
+import com.typesafe.config.ConfigFactory
 import com.typesafe.sbt.packager.MappingsHelper
 import com.typesafe.sbt.packager.universal.{Archives, UniversalDeployPlugin, UniversalPlugin}
 import sbt._
 import sbt.Keys._
 import sbt.librarymanagement.{Constant, ModuleID, UnresolvedWarning, UnresolvedWarningConfiguration, UpdateConfiguration}
-
 import de.wayofquality.sbt.filterresources.FilterResources
 import de.wayofquality.sbt.filterresources.FilterResources.autoImport._
 
@@ -31,11 +33,10 @@ object BlendedContainerPlugin extends AutoPlugin {
 
     val materializeProfile = taskKey[Unit]("Materialize the profile")
     val materializeExtraDeps = taskKey[Seq[(ModuleID, File)]]("Extra dependencies, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
-    //    val materializeFetchFeatureDeps = taskKey[Seq[ModuleID]]("Dependencies denoting features, which will be fetched and examined to generate a dependencies list")
+    val materializeFeatures = taskKey[Seq[ModuleID]]("Dependencies denoting feature configuration files")
+    val materializeFetchFeatureDeps = taskKey[Seq[(ModuleID, File, Seq[ModuleID])]]("Dependencies denoting features, which will be fetched and examined to generate a dependencies list")
     val materializeExtraFeatures = taskKey[Seq[(Feature, File)]]("Extra dependencies representing feature conf files, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeToolsCp = taskKey[Seq[File]]("Tools Classpath for the RuntimeConfigBuilder / Materializer")
-
-    val materializeFeatures = taskKey[Seq[ModuleID]]("Dependencies denoting feature configuration files")
 
     val materializeOverlays = taskKey[Seq[(ModuleID, File)]]("Additional overlays that should be applied to the materialized profile")
 
@@ -159,7 +160,7 @@ object BlendedContainerPlugin extends AutoPlugin {
 
       val depRes = (Compile / dependencyResolution).value
 
-      def resolveDepToToolArg(dep: ModuleID)(gavAndFileAction: (String, File) => Seq[String]): Seq[String] = {
+      def resolveDepToToolArg[T](dep: ModuleID)(gavAndFileAction: (String, File) => Seq[T]): Seq[T] = {
         val gav = moduleIdToGav(dep)
         val updateConfiguration = UpdateConfiguration()
         val unresolvedWarningConfiguration = UnresolvedWarningConfiguration()
@@ -192,23 +193,45 @@ object BlendedContainerPlugin extends AutoPlugin {
       // Features, which are resolved from a repository
       val featureDeps = materializeFeatures.value
       log.debug(s"Feature dependencies: ${featureDeps}")
-      val featureArgs = featureDeps.map(d =>
+
+      val featureGavs = featureDeps.map(d =>
         d.withExplicitArtifacts(Vector(Artifact(
           name = d.name,
           `type` = "conf",
           extension = "conf"
         ))))
-        .flatMap { dep =>
-          resolveDepToToolArg(dep)((gav, file) => Seq("--feature-repo", file.getAbsolutePath()))
-        }
 
+      val featureArgs = featureGavs.flatMap { dep =>
+        resolveDepToToolArg(dep)((gav, file) => Seq("--feature-repo", file.getAbsolutePath()))
+      }
+
+      val featureFiles = featureGavs.flatMap { dep =>
+        resolveDepToToolArg(dep)((gav, file) => Seq(file.getAbsoluteFile()))
+      }
+
+      import scala.collection.JavaConverters._
+
+      val examinedFeatureDeps: Seq[ModuleID] = featureFiles.flatMap { file =>
+        Try {
+          val urls = ConfigFactory.parseFile(file).getConfigList("bundles").asScala.map(o => o.getString("url"))
+          urls.flatMap { url =>
+            if (url.startsWith("mvn:")) {
+              val gav = url.split("[:]")
+              Seq(gav(1) % gav(2) % gav(3))
+            } else {
+              Seq()
+            }
+          }
+        }.getOrElse(Seq())
+      }
+      log.debug(s"Examined feature dependencies: ${examinedFeatureDeps}")
 
       // TODO: also examine resolved features and fetch their declared bundles
 
       // We need to declare all bundles as libraryDependencies!
       // but we also support all referenced bundles from features
       val libDeps: Seq[ModuleID] =
-        (Compile / libraryDependencies).value ++
+        (Compile / libraryDependencies).value ++ examinedFeatureDeps ++
           materializeExtraFeatures.value.flatMap {
             case (feature, file) =>
               feature.libDeps

@@ -53,15 +53,13 @@ lazy val root = project.in(file("."))
     materializeFeatures := Seq(
       testOrg %% f1Name % testVersion
     ),
-    // TODO: automatically fetch
-    libraryDependencies += "org.apache.felix" % "org.apache.felix.framework" % "5.6.0",
 
     materializeExtraFeatures := Seq(
       (feature2 / featureGenerate).value
     )
   )
 
-TaskKey[Unit]("verify") :=  {
+TaskKey[Unit]("verify") := {
   println("DUMMY TEST")
 }
 
