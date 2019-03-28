@@ -31,8 +31,11 @@ object BlendedContainerPlugin extends AutoPlugin {
 
     val materializeProfile = taskKey[Unit]("Materialize the profile")
     val materializeExtraDeps = taskKey[Seq[(ModuleID, File)]]("Extra dependencies, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
+    //    val materializeFetchFeatureDeps = taskKey[Seq[ModuleID]]("Dependencies denoting features, which will be fetched and examined to generate a dependencies list")
     val materializeExtraFeatures = taskKey[Seq[(Feature, File)]]("Extra dependencies representing feature conf files, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeToolsCp = taskKey[Seq[File]]("Tools Classpath for the RuntimeConfigBuilder / Materializer")
+
+    val materializeFeatures = taskKey[Seq[ModuleID]]("Dependencies denoting feature configuration files")
 
     val materializeOverlays = taskKey[Seq[(ModuleID, File)]]("Additional overlays that should be applied to the materialized profile")
 
@@ -105,6 +108,8 @@ object BlendedContainerPlugin extends AutoPlugin {
 
     materializeSourceProfile := (Compile / filterTargetDir).value / "profile" / "profile.conf",
 
+    materializeFeatures := Seq(),
+
     materializeExtraDeps := Seq(),
 
     materializeExtraFeatures := Seq(),
@@ -152,34 +157,9 @@ object BlendedContainerPlugin extends AutoPlugin {
 
       val srcProfile = materializeSourceProfile.value
 
-      //        // We nee to declare all feature files as module deps
-      //        log.debug(s"dependencyClasspathAsJars: ${(Compile / dependencyClasspathAsJars).value}")
-      //        log.debug(s"dependencyClasspath: ${(Compile / dependencyClasspath).value}")
-      //        val featureFiles = (Compile / dependencyClasspathAsJars).value
-      //          .map(_.data)
-      //          .filter(_.name.endsWith(".conf"))
-      //        log.debug(s"Feature files: ${featureFiles}")
-      //
-      //        //         Trigger feature file generation and add them to cmdline
-      //        //        val featuresWithFile = (BlendedLauncherFeatures.project / BlendedLauncherFeatures.generateFeatureConfigs).value
-      //        //        val featureFiles = featuresWithFile.map(_._2)
-      //        val featureArgs = featureFiles.flatMap { f =>
-      //          Seq("--feature-repo", f.getAbsolutePath())
-      //        }
-      //        log.debug(s"feature args: ${featureArgs}")
-
       val depRes = (Compile / dependencyResolution).value
 
-      // We need to declare all bundles as libraryDependencies!
-      // but we also support all referenced bundles from features
-      val libDeps: Seq[ModuleID] =
-      (Compile / libraryDependencies).value ++
-        materializeExtraFeatures.value.flatMap {
-          case (feature, file) =>
-            feature.libDeps
-        }
-
-      val artifactArgs = libDeps.flatMap { dep: ModuleID =>
+      def resolveDepToToolArg(dep: ModuleID)(gavAndFileAction: (String, File) => Seq[String]): Seq[String] = {
         val gav = moduleIdToGav(dep)
         val updateConfiguration = UpdateConfiguration()
         val unresolvedWarningConfiguration = UnresolvedWarningConfiguration()
@@ -202,12 +182,40 @@ object BlendedContainerPlugin extends AutoPlugin {
             if (!file.exists()) {
               log.error(s"Resolved file does not exist: ${file}")
             }
-            Seq("--maven-artifact", gav, file.getAbsolutePath())
+            gavAndFileAction(gav, file)
           case None =>
             log.warn(s"No file associated with dependency: ${dep} => ${gav}")
             Seq()
         }
+      }
 
+      // Features, which are resolved from a repository
+      val featureDeps = materializeFeatures.value
+      log.debug(s"Feature dependencies: ${featureDeps}")
+      val featureArgs = featureDeps.map(d =>
+        d.withExplicitArtifacts(Vector(Artifact(
+          name = d.name,
+          `type` = "conf",
+          extension = "conf"
+        ))))
+        .flatMap { dep =>
+          resolveDepToToolArg(dep)((gav, file) => Seq("--feature-repo", file.getAbsolutePath()))
+        }
+
+
+      // TODO: also examine resolved features and fetch their declared bundles
+
+      // We need to declare all bundles as libraryDependencies!
+      // but we also support all referenced bundles from features
+      val libDeps: Seq[ModuleID] =
+        (Compile / libraryDependencies).value ++
+          materializeExtraFeatures.value.flatMap {
+            case (feature, file) =>
+              feature.libDeps
+          }
+
+      val artifactArgs = libDeps.flatMap { dep =>
+        resolveDepToToolArg(dep)((gav, file) => Seq("--maven-artifact", gav, file.getAbsolutePath()))
       }
       log.debug(s"artifact args: ${artifactArgs}")
 
@@ -254,7 +262,7 @@ object BlendedContainerPlugin extends AutoPlugin {
           "--update-checksums",
           "--write-overlays-config"),
         debugArgs,
-        //          featureArgs,
+        featureArgs,
         artifactArgs,
         extraArtifactArgs,
         extraFeatureArgs,
@@ -303,8 +311,8 @@ object BlendedContainerPlugin extends AutoPlugin {
         PathFinder(profileDir).allPaths.pair(
           f => IO.relativize(profileDir, f).map(p => s"profiles/${profileName.value}/${version.value}/${p}")
         ) ++
-        Seq(profileDir -> s"profiles/${profileName.value}/${version.value}") ++
-        materializeLaunchConf.value.toList.map(f => f -> f.getName())
+          Seq(profileDir -> s"profiles/${profileName.value}/${version.value}") ++
+          materializeLaunchConf.value.toList.map(f => f -> f.getName())
     },
 
     packageFullNoJreZip := {
@@ -393,7 +401,6 @@ object BlendedContainerPlugin extends AutoPlugin {
       )
     }
 
-
   )
 
   def moduleIdToGav(dep: ModuleID): String = {
@@ -419,11 +426,11 @@ object BlendedContainerPlugin extends AutoPlugin {
   }
 
   /**
-    *
-    * @param moduleID
-    * @param scalaBinVersion We hard-code the default, to avoid to make this def a sbt setting.
-    * @return
-    */
+   *
+   * @param moduleID
+   * @param scalaBinVersion We hard-code the default, to avoid to make this def a sbt setting.
+   * @return
+   */
   def artifactNameSuffix(moduleID: ModuleID, scalaBinVersion: String = "2.12"): String = moduleID.crossVersion match {
     case b: Binary => s"_${b.prefix}${scalaBinVersion}${b.suffix}"
     case c: Constant => s"_${c.value}"

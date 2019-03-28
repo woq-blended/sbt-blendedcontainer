@@ -10,4 +10,3 @@ $ exists target/blended.sbt.container.scripted.simple_2.12-0.1-full-nojre.tar.gz
 
 > packageFullNoJreZip
 $ exists target/blended.sbt.container.scripted.simple_2.12-0.1-full-nojre.zip
-
