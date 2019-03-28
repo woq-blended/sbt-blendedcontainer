@@ -31,13 +31,14 @@ object BlendedContainerPlugin extends AutoPlugin {
     val materializeExplodeResources = settingKey[Boolean]("Should resources already be exploded")
     val materializeLaunchConf = settingKey[Option[File]]("The name of the optional created launch.conf file")
 
-//    val materializeOverlays = taskKey[Seq[File]]("Overlays required to be materialized")
     val materializeProfile = taskKey[Unit]("Materialize the profile")
     val materializeExtraDeps = taskKey[Seq[(ModuleID, File)]]("Extra dependencies, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeFeatures = taskKey[Seq[ModuleID]]("Dependencies denoting feature configuration files")
-    val materializeFetchFeatureDeps = taskKey[Seq[(ModuleID, File, Seq[ModuleID])]]("Dependencies denoting features, which will be fetched and examined to generate a dependencies list")
+//    val materializeFetchFeatureDeps = taskKey[Seq[(ModuleID, File, Seq[ModuleID])]]("Dependencies denoting features, which will be fetched and examined to generate a dependencies list")
     val materializeExtraFeatures = taskKey[Seq[(Feature, File)]]("Extra dependencies representing feature conf files, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeToolsCp = taskKey[Seq[File]]("Tools Classpath for the RuntimeConfigBuilder / Materializer")
+
+    val materializeContainerFiles = taskKey[File]("Additional files placed into the container directory")
 
     val materializeOverlays = taskKey[Seq[File]]("Additional overlays that should be applied to the materialized profile")
 
@@ -111,6 +112,8 @@ object BlendedContainerPlugin extends AutoPlugin {
     materializeLaunchConf := Some(target.value / "container" / "launch.conf"),
 
     materializeSourceProfile := (Compile / filterTargetDir).value / "profile" / "profile.conf",
+
+    materializeContainerFiles := (Compile / filterTargetDir).value / "container",
 
     materializeFeatures := Seq(),
 
@@ -321,7 +324,7 @@ object BlendedContainerPlugin extends AutoPlugin {
       materializeProfile.value
 
       val launcherDir = unpackLauncherZip.value
-      val containerResources = (Compile / filterTargetDir).value / "container"
+      val containerResources = materializeContainerFiles.value
       val profileDir = materializeTargetDir.value
 
       PathFinder(launcherDir).allPaths.pair(MappingsHelper.relativeTo(launcherDir)).
