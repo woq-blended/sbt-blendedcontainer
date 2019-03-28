@@ -10,6 +10,32 @@ Add the plugin to your `project/plugins.sbt` file.
 addSbtPlugin("de.wayofquality.blended" % "sbt-blendedcontainer" % "{version}")
 ----
 
+== Motivation
+
+Blended is a framework based on OSGi, Scala and various other JVM technologies to build a modular and customizable middleware.
+
+The blended launcher supports a rich feature set of configuration and also manages self-updates.
+To keep the logic consistent, blended launcher ships with some tools which can used via Java/Scala API as well as cmdline API.
+
+The purpose of this plugin is to infer and gather as much information from the build system and feed them to these tools to keep the develoment setup as consistent as possible with the runtime setup.
+
+The key concepts you have to understand are:
+
+* Bundles, start state and start levels (pure OSGi)
+* Features to collection sets of bundles (Blended concept, but also known from Eclipse or Apache Karaf)
+* Overlays
+* Profiles
+* Deployment Packs
+
+== Details
+
+Beware, this plugin is rather complex and not very well factored. But it works.
+
+To the real work, this plugin leaverages the updater tools provided by the blended framework.
+
+The plugin is essentially lots of glue code to wrap sbt logic and resources to blended launcher/updater logic.
+
+
 
 == License
 
