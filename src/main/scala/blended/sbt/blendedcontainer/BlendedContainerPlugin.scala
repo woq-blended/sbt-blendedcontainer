@@ -234,8 +234,6 @@ object BlendedContainerPlugin extends AutoPlugin {
       }
       log.debug(s"Examined feature dependencies: ${examinedFeatureDeps}")
 
-      // TODO: also examine resolved features and fetch their declared bundles
-
       // We need to declare all bundles as libraryDependencies!
       // but we also support all referenced bundles from features
       val libDeps: Seq[ModuleID] =
