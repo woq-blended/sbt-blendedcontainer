@@ -31,6 +31,7 @@ object BlendedContainerPlugin extends AutoPlugin {
     val materializeExplodeResources = settingKey[Boolean]("Should resources already be exploded")
     val materializeLaunchConf = settingKey[Option[File]]("The name of the optional created launch.conf file")
 
+//    val materializeOverlays = taskKey[Seq[File]]("Overlays required to be materialized")
     val materializeProfile = taskKey[Unit]("Materialize the profile")
     val materializeExtraDeps = taskKey[Seq[(ModuleID, File)]]("Extra dependencies, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeFeatures = taskKey[Seq[ModuleID]]("Dependencies denoting feature configuration files")
@@ -38,7 +39,7 @@ object BlendedContainerPlugin extends AutoPlugin {
     val materializeExtraFeatures = taskKey[Seq[(Feature, File)]]("Extra dependencies representing feature conf files, which can't be expressed as libraryDependencies, e.g. other sub-projects for resources")
     val materializeToolsCp = taskKey[Seq[File]]("Tools Classpath for the RuntimeConfigBuilder / Materializer")
 
-    val materializeOverlays = taskKey[Seq[(ModuleID, File)]]("Additional overlays that should be applied to the materialized profile")
+    val materializeOverlays = taskKey[Seq[File]]("Additional overlays that should be applied to the materialized profile")
 
     val packageFullNoJreMapping = taskKey[Seq[(File, String)]]("Mapping for product package without a JRE")
 
@@ -102,6 +103,8 @@ object BlendedContainerPlugin extends AutoPlugin {
     },
 
     materializeDebug := false,
+
+    materializeOverlays := Seq(),
 
     materializeTargetDir := target.value / "profile",
 
@@ -264,18 +267,7 @@ object BlendedContainerPlugin extends AutoPlugin {
 
       val explodeResourcesArgs = if (materializeExplodeResources.value) Seq("--explode-resources") else Nil
 
-      //          val overlayArgs =
-      //          // prepend base dir if set
-      //            Option(overlays).getOrElse(ju.Collections.emptyList()).asScala.map { o =>
-      //              Option(overlaysDir) match {
-      //                case None => o
-      //                case _ if o.isAbsolute() => o
-      //                case Some(f) => new File(f, o.getPath())
-      //              }
-      //            }.
-      //              // create args
-      //              flatMap(o => Seq("--add-overlay-file", o.getAbsolutePath())).toArray
-      //
+      val overlayArgs = materializeOverlays.value.flatMap(o => Seq("--add-overlay-file", o.getAbsolutePath()))
 
       val launchConfArgs = materializeLaunchConf.value.toList.flatMap { cf =>
         Option(cf.getParentFile()).foreach(_.mkdirs())
@@ -296,10 +288,9 @@ object BlendedContainerPlugin extends AutoPlugin {
         extraArtifactArgs,
         extraFeatureArgs,
         explodeResourcesArgs,
-        launchConfArgs
+        launchConfArgs,
+        overlayArgs
       ).flatten
-
-      //  ++ overlayArgs
 
       log.debug("About to run RuntimeConfigBuilder.run with args: " + profileArgs.mkString("\n    "))
 
