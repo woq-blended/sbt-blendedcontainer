@@ -215,11 +215,19 @@ object BlendedContainerPlugin extends AutoPlugin {
         Try {
           val urls = ConfigFactory.parseFile(file).getConfigList("bundles").asScala.map(o => o.getString("url"))
           urls.flatMap { url =>
-            if (url.startsWith("mvn:")) {
-              val gav = url.split("[:]")
-              Seq(gav(1) % gav(2) % gav(3))
-            } else {
-              Seq()
+            url.split("[:]") match {
+              case Array("mvn", g, a, v) => Seq(g % a % v)
+              case Array("mvn", g, a, c, v, t) => Seq(
+                g % a % v withExplicitArtifacts (Vector(Artifact(
+                  name = a,
+                  `type` = t,
+                  extension = t,
+                  classifier = c
+                )))
+              )
+              case x =>
+                log.debug(s"Cannot extract dependency info. Unsupported url format: ${x}")
+                Seq()
             }
           }
         }.getOrElse(Seq())
