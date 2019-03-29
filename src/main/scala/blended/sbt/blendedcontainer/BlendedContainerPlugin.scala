@@ -47,12 +47,12 @@ object BlendedContainerPlugin extends AutoPlugin {
     val packageFullNoJreTarGzArtifact = settingKey[Artifact]("Artifact")
     val packageFullNoJreTarGz = taskKey[File]("Create a product package without a JRE")
 
-    val packageJreLinuxArchive = taskKey[(File, Option[String])]("The Linux JRE .tar.gz archive and the optional prefix denoting the jre directory in the archive")
+    val packageJreLinuxArchive = taskKey[(Option[File], Option[String])]("The Linux JRE .tar.gz archive and the optional prefix denoting the jre directory in the archive")
     val packageFullJreLinuxMapping = taskKey[Seq[(File, String)]]("Mapping for product package without a JRE")
     val packageFullJreLinuxArtifact = settingKey[Artifact]("Artifact")
     val packageFullJreLinuxTarGz = taskKey[File]("Create a product package with a Linux JRE")
 
-    val packageJreWindowsArchive = taskKey[(File, Option[String])]("The Windows JRE .tar.gz archive and the optional prefix denoting the jre directory in the archive")
+    val packageJreWindowsArchive = taskKey[(Option[File], Option[String])]("The Windows JRE .tar.gz archive and the optional prefix denoting the jre directory in the archive")
     val packageFullJreWindowsMapping = taskKey[Seq[(File, String)]]("Mapping for product package without a JRE")
     val packageFullJreWindowsArtifact = settingKey[Artifact]("Artifact")
     val packageFullJreWindowsZip = taskKey[File]("Create a product package with a Windows JRE")
@@ -347,7 +347,12 @@ object BlendedContainerPlugin extends AutoPlugin {
     },
 
     packageFullJreLinuxMapping := {
-      val (jre, prefix) = packageJreLinuxArchive.value
+      if (packageJreLinuxArchive.value._1.isEmpty) {
+        throw new RuntimeException("No JRE defined via 'packageJreLinuxArchive'")
+      }
+
+
+      val (Some(jre), prefix) = packageJreLinuxArchive.value
 
       if (!jre.exists()) {
         throw new FileNotFoundException(s"JRE archive file not found: ${jre}")
@@ -389,7 +394,11 @@ object BlendedContainerPlugin extends AutoPlugin {
     ),
 
     packageFullJreWindowsMapping := {
-      val (jre, prefix) = packageJreWindowsArchive.value
+      if (packageJreWindowsArchive.value._1.isEmpty) {
+        throw new RuntimeException("No JRE defined via 'packageJreWindowsArchive'")
+      }
+
+      val (Some(jre), prefix) = packageJreWindowsArchive.value
 
       if (!jre.exists()) {
         throw new FileNotFoundException(s"JRE archive file not found: ${jre}")
@@ -416,7 +425,14 @@ object BlendedContainerPlugin extends AutoPlugin {
           IO.relativize(realJreDir, f).map(p => s"jre/${p}"))
     },
 
+    packageJreWindowsArchive := (None, None),
+    packageJreLinuxArchive := (None, None),
+
     packageFullJreWindowsZip := {
+      if (packageJreWindowsArchive.value._1.isEmpty) {
+        throw new RuntimeException("No JRE defined via 'packageJreWindowsArchive'")
+      }
+
       validateMapping(packageFullJreWindowsMapping.value, streams.value.log)
 
       val outputName = s"${profileName.value}-${version.value}-full-jre-windows"
@@ -430,6 +446,10 @@ object BlendedContainerPlugin extends AutoPlugin {
     },
 
     packageFullJreLinuxTarGz := {
+      if (packageJreWindowsArchive.value._1.isEmpty) {
+        throw new RuntimeException("No JRE defined via 'packageJreWindowsArchive'")
+      }
+
       validateMapping(packageFullJreLinuxMapping.value, streams.value.log)
 
       val outputName = s"${profileName.value}-${version.value}-full-jre-linux"
