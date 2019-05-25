@@ -1,6 +1,10 @@
 = Blended Container packaging as sbt plugin
 :version: 0.1-SNAPSHOT
 
+== Deprectaed
+
+The functionality of this project has moved to https://github.com/woq-blended/sbt-blendedbuild.
+
 == Quickstart
 
 Add the plugin to your `project/plugins.sbt` file.

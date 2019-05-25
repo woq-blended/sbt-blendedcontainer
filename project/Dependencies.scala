@@ -12,7 +12,7 @@ object Dependencies {
 
   val sbtBlendedFeature = Def.setting("de.wayofquality.blended" % "sbt-blendedfeature" % "0.1-SNAPSHOT" withExtraAttributes sbtAttributes.value)
 
-  val sbtFilterResources = Def.setting("de.wayofquality" % "sbt-filterresources" % "0.1.1-SNAPSHOT" withExtraAttributes sbtAttributes.value)
+  val sbtFilterResources = Def.setting("de.wayofquality.sbt" % "sbt-filterresources" % "0.1.2" withExtraAttributes sbtAttributes.value)
 
   val sbtNativePackager = Def.setting("com.typesafe.sbt" % "sbt-native-packager" % "1.3.9" withExtraAttributes sbtAttributes.value)
 
